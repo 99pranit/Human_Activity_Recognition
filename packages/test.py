@@ -2,7 +2,9 @@ import utime , time
 from machine import I2C, Pin
 from mpu9250 import MPU9250
 from ak8963 import AK8963
-import rf_model
+import motion_model
+import steady_model
+import unsteady_model
 from madgwick import Madgwick
 
 mapper = {
@@ -37,7 +39,13 @@ while True:
         last_time = current_time
         madgwick.updateIMU(X[0], X[1], X[2], X[3], X[4], X[5], dt)
         X = madgwick.getEuler() + madgwick.getGravity() + X
-        score = rf_model.score(X)
+        motion_score = rf_model.score(X)
+        if motion_score[0] >= motion_score[1]:
+            score = unsteady.score(X)
+            score = score[0] + [0] * 2 + score[1:] + [0]
+        else:
+            score = steady.score(X)
+            score = [0] * 2 + score[:2] + [0] * 3 + score[2]
         maxval = max(rf_model.score(X))
         for i , s in enumerate(score):
             if s == maxval:
