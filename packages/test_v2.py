@@ -2,20 +2,20 @@ import utime , time
 from machine import I2C, Pin
 from mpu9250 import MPU9250
 from ak8963 import AK8963
-import motion_model
-import steady_model
-import unsteady_model
-import staircase_model
-import surface_model
+import motion_model , steady_model , unsteady_model , staircase_model , surface_model
 from madgwick import Madgwick
+import display
+
+state = False
+pin = Pin(0, Pin.IN, Pin.PULL_DOWN)
 
 mapper = {
-    0 : 'Jogging' ,
-    1 : 'Sitting' ,
-    2 : 'Standing' ,
+    0 : 'Walking' ,
+    1 : 'Jogging' ,
+    2 : 'Downstairs' ,
     3 : 'Upstairs' ,
-    4 : 'Walking' ,
-    5 : 'Downstairs' ,
+    4 : 'Sitting' ,
+    5 : 'Standing' ,
     6 : 'Sleeping'
     }
 
@@ -28,12 +28,32 @@ sensor = MPU9250(i2c, ak8963=ak8963)
 print("MPU9250 id: " + hex(sensor.whoami))
 last_time = time.ticks_ms()
 
+last_button_state = 1
     
 while True:
+    current_button_state = pin.value()
+    
+    if last_button_state == 1 and current_button_state == 0:
+        # button pressed (falling edge)
+        utime.sleep_ms(500)
+        if pin.value() == 0:
+            state = not state
+            if not state:
+                display.screen("Device OFF").show_once()
+            else:
+                display.screen("Device ON").show_once()
+    
+    last_button_state = current_button_state
+
+    if not state:
+        display.screen("System is OFF").show_once()
+        utime.sleep_ms(1000)
+        continue
+    
     window = []
-    category = [0] * 6
+    category = [0] * 7
     c = 0
-    while(c != 10):
+    while(c != 30):
         X = list(sensor.gyro)+list(sensor.acceleration)
         madgwick = Madgwick(beta=0.1)
         current_time = time.ticks_ms()
@@ -47,12 +67,12 @@ while True:
             score = [0 , 0 , 0 , 0 , steady_score[0] , steady_score[1] , steady_score[2]]
         else:
             unsteady_score = unsteady_model.score(X)
-            if unsteady_score[0] >= unsteady_score[1]:
+            if unsteady_score[0] <= unsteady_score[1]:
                 staircase_score = staircase_model.score(X)
-                score = [0 , staircase_score[0] , staircase_score[1] , 0 , 0 , 0 , 0]
+                score = [0 , 0 , staircase_score[0] , staircase_score[1] , 0 , 0 , 0]
             else:
                 surface_score = surface_model.score(X)
-                score = [surface_score[0] , 0 , 0 , surface_score[1] , 0 , 0 , 0 , 0]
+                score = [surface_score[0] , surface_score[1] , 0 , 0 , 0 , 0 , 0 , 0]
             
         maxval = max(score)
         for i , s in enumerate(score):
@@ -65,5 +85,11 @@ while True:
         if c == maxcat:
             index = i
             break
-    print(mapper.get(index) if mapper.get(index) is not None else 'nothing')
-    utime.sleep_ms(1000)
+    activity = mapper.get(index) if mapper.get(index) is not None else 'nothing'
+    print(category)
+    print(activity)
+    x = 10
+    y = 1
+    display.screen(activity).show_once()
+    utime.sleep_ms(3000)
+
