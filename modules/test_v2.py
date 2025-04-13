@@ -54,7 +54,7 @@ while True:
     category = [0] * 7
     c = 0
     while(c != 30):
-        X = list(sensor.gyro)+list(sensor.acceleration)
+        X = list(sensor.gyro)+list(sensor.acceleration) + list(sensor.magnetic) + [sensor.temperature]
         madgwick = Madgwick(beta=0.1)
         current_time = time.ticks_ms()
         dt = time.ticks_diff(current_time, last_time) / 1000.0
@@ -72,7 +72,7 @@ while True:
                 score = [0 , 0 , staircase_score[0] , staircase_score[1] , 0 , 0 , 0]
             else:
                 surface_score = surface_model.score(X)
-                score = [surface_score[0] , surface_score[1] , 0 , 0 , 0 , 0 , 0 , 0]
+                score = [surface_score[0] , surface_score[1] , 0 , 0 , 0 , 0 , 0]
             
         maxval = max(score)
         for i , s in enumerate(score):
@@ -92,4 +92,5 @@ while True:
     y = 1
     display.screen(activity).show_once()
     utime.sleep_ms(3000)
+
 

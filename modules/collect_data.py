@@ -29,9 +29,10 @@ last_time = time.ticks_ms()
 data.append(['attitude.roll', 'attitude.pitch', 'attitude.yaw', 'gravity.x',
              'gravity.y', 'gravity.z', 'rotationRate.x', 'rotationRate.y',
              'rotationRate.z', 'userAcceleration.x', 'userAcceleration.y',
-             'userAcceleration.z'])
+             'userAcceleration.z', 'magnetic.x', 'magnetic.y',
+             'magnetic.z' , 'temperature'])
 while count != 2200:
-    X = list(sensor.gyro)+list(sensor.acceleration)
+    X = list(sensor.gyro)+list(sensor.acceleration) + list(sensor.magnetic) + [sensor.temperature]
     madgwick = Madgwick(beta=0.1)
     current_time = time.ticks_ms()
     dt = time.ticks_diff(current_time, last_time) / 1000.0  # Delta time in seconds
